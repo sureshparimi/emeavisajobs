@@ -8,7 +8,7 @@ import streamlit.components.v1 as components
 # # Set the page configuration
 st.set_page_config(page_title='Jobs in EU', page_icon="💼", layout='wide', initial_sidebar_state='auto')
 # Title of the page
-st.title("Handpicked Jobs in Europe")
+st.title("Handpicked Jobs in Europe with Visa/Relocation Support")
 
 # Function to extract email addresses from text using regex
 def extract_emails(text):

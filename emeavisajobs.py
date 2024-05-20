@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit.components.v1 as components
 
 # # Set the page configuration
-st.set_page_config(page_title='Jobs in EU', page_icon="💼", layout='wide', initial_sidebar_state='auto')
+st.set_page_config(page_title='Jobs in EU', page_icon="✈️", layout='wide', initial_sidebar_state='auto')
 # Title of the page
 st.title("Handpicked Jobs in Europe with Visa/Relocation Support")
 

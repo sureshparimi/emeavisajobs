@@ -3,12 +3,12 @@ import re
 import json
 from google.cloud import firestore
 import pandas as pd
-import streamlit.components.v1 as components
 
-# # Set the page configuration
-st.set_page_config(page_title='Jobs in EU', page_icon="✈️", layout='wide', initial_sidebar_state='auto')
+# Set the page configuration
+st.set_page_config(page_title='Jobs in EU', page_icon="💼", layout='wide', initial_sidebar_state='auto')
+
 # Title of the page
-st.title("Handpicked Jobs in Europe with Visa/Relocation Support")
+st.title("Handpicked Jobs in Europe")
 
 # Function to extract email addresses from text using regex
 def extract_emails(text):
@@ -19,7 +19,6 @@ def check_visa_relocation(text):
     text = text.lower()
     return 'Yes' if 'visa sponsorship' in text or 'relocation' in text else 'No'
 
-# Initialize Firestore client
 def initialize_firestore():
     # Load the secrets from the secrets.json file
     secrets = st.secrets["firebase_config"]
@@ -30,7 +29,7 @@ def initialize_firestore():
 # Function to fetch job data from Firestore
 def fetch_job_data(db):
     job_data = []
-    collection_ref = db.collection("emeavisajobs")
+    collection_ref = db.collection("emeajobs")
     docs = collection_ref.stream()
     for doc in docs:
         doc_data = doc.to_dict()
@@ -47,11 +46,58 @@ def filter_dataframe(df, job_title, location, visa_relocation_filter):
         df = df[df['Visa/Relocation?'] == 'Yes']
     return df
 
+# Function to check if job was posted "x months ago"
+def check_very_old(posted_time):
+    if 'month' in posted_time:
+        months_ago = int(posted_time.split()[0])
+        if months_ago >= 1:
+            return True
+    return False
+
+# Function to highlight email addresses in the contact field
+def highlight_emails(contact_info):
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+    emails = re.findall(email_pattern, contact_info)
+    highlighted_contact = contact_info
+    for email in emails:
+        highlighted_contact = highlighted_contact.replace(email, f'<a href="mailto:{email}" style="color: blue;">{email}</a>')
+    return highlighted_contact
+
 # Function to display rows as cards
 def display_cards(df):
     num_cols = 4  # Number of cards per row
     num_rows = len(df) // num_cols + (len(df) % num_cols > 0)
     colors = ['#1abc9c', '#2ecc71', '#3498db', '#9b59b6', '#34495e', '#f1c40f', '#e67e22', '#e74c3c', '#95a5a6']
+
+    card_style = """
+        <style>
+            .card {
+                border: 2px solid #3498db;
+                border-radius: 10px;
+                padding: 20px;
+                margin: 10px;
+                background-color: #f4f6f7;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
+            .card h3 {
+                color: white;
+            }
+            .card p {
+                color: #7f8c8d;
+            }
+            .card .header {
+                border-radius: 10px 10px 0 0;
+                padding: 10px;
+            }
+            .card .footer {
+                padding: 10px;
+                color: #3498db;
+            }
+        </style>
+    """
+    st.markdown(card_style, unsafe_allow_html=True)
 
     for i in range(num_rows):
         cols = st.columns(num_cols)
@@ -71,38 +117,29 @@ def display_cards(df):
                         ticker_style = ""
 
                     if df.loc[idx, 'Visa/Relocation?'] == 'Yes':
-                        visa_relocation_style = f"background-color: #2ecc71; color: white; border-radius: 20px; padding: 5px 10px;"
+                        visa_relocation_style = "background-color: #2ecc71; color: white; border-radius: 20px; padding: 5px 10px;"
                     else:
                         visa_relocation_style = ""
 
                     card_content = f"""
-                        <div style="border: 2px solid #3498db; border-radius: 10px; padding: 20px; margin: 10px; background-color: #f4f6f7;">
-                            <div style="background-color: {background_color}; border-radius: 10px 10px 0 0; padding: 10px;">
-                                <h3 style="color: white;">{df.loc[idx, 'job-title']}</h3>
+                        <div class="card">
+                            <div class="header" style="background-color: {background_color};">
+                                <h3>{df.loc[idx, 'job-title']}</h3>
                             </div>
-                            <p style="color: #7f8c8d;"><b>Company:</b> {df.loc[idx, 'company']}</p>
-                            <p style="color: #7f8c8d;"><b>Location:</b> {df.loc[idx, 'location']}</p>
-                            <p style="color: #7f8c8d;"><b>Date Posted:</b> {df.loc[idx, 'posted-time-ago']}</p>
-                            <p style="color: #7f8c8d;"><b>Job Description:</b> {df.loc[idx, 'Job_txt'][:100]}...</p>
-                            <p style="color: #7f8c8d;"><b>Contact:</b> {highlight_emails(contact_info)}</p>
-                            <p style="color: #7f8c8d;"><b>Visa/Relocation:</b> <span style="{visa_relocation_style}">{df.loc[idx, 'Visa/Relocation?']}</span></p>
+                            <p><b>Company:</b> {df.loc[idx, 'company']}</p>
+                            <p><b>Location:</b> {df.loc[idx, 'location']}</p>
+                            <p><b>Date Posted:</b> {df.loc[idx, 'posted-time-ago']}</p>
+                            <p><b>Job Description:</b> {df.loc[idx, 'Job_txt'][:100]}...</p>
+                            <p><b>Contact:</b> {highlight_emails(contact_info)}</p>
+                            <p><b>Visa/Relocation:</b> <span style="{visa_relocation_style}">{df.loc[idx, 'Visa/Relocation?']}</span></p>
                             <div style="{ticker_style}">{posted_time_ago}</div>
                             <a href="{job_link}" target="_blank" style="text-decoration: none;">
-                                <div style="padding: 10px; color: #3498db;"><b>Click here to view the job</b></div>
+                                <div class="footer"><b>Click here to view the job</b></div>
                             </a>
                         </div>
                     """
-                    
-                    st.markdown(card_content, unsafe_allow_html=True)
 
-# Function to highlight email addresses in the contact field
-def highlight_emails(contact_info):
-    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-    emails = re.findall(email_pattern, contact_info)
-    highlighted_contact = contact_info
-    for email in emails:
-        highlighted_contact = highlighted_contact.replace(email, f'<a href="mailto:{email}" style="color: blue;">{email}</a>')
-    return highlighted_contact
+                    st.markdown(card_content, unsafe_allow_html=True)
 
 # Function to display contact card
 def display_contact_card():
@@ -135,18 +172,8 @@ def display_insights_card(total_jobs, visa_relocation_jobs):
         </div>
         """, unsafe_allow_html=True)
 
-# Function to check if job was posted "x months ago"
-def check_very_old(posted_time):
-    if 'month' in posted_time:
-        months_ago = int(posted_time.split()[0])
-        if months_ago >= 1:
-            return True
-    return False
-
 # Streamlit App main function
 def main():
-    
-    
     # Initialize Firestore client
     db = initialize_firestore()
 
@@ -177,7 +204,7 @@ def main():
 
     # Display the contact card in the sidebar
     display_contact_card()
-    
+
     # Calculate insights
     total_jobs = len(df)
     visa_relocation_jobs = (df['Visa/Relocation?'] == 'Yes').sum()

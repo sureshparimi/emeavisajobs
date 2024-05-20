@@ -1,0 +1,5 @@
+google-cloud-firestore
+streamlit>=1.30.0
+pandas>2.0
+numpy<=1.25.1
+streamlit-navigation-bar
